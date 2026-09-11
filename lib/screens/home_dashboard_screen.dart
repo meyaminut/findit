@@ -1,9 +1,11 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/report.dart';
-import '../widgets/status_badge.dart';
+import '../widgets/activity_card.dart';
 import 'report_lost_screen.dart';
-import 'report_form_screen.dart';
+import 'report_found_screen.dart';
+import 'report_detail_screen.dart';
+import 'search_screen.dart';
+import 'my_reports_screen.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key, this.userName = 'Sarah'});
@@ -15,6 +17,8 @@ class HomeDashboardScreen extends StatefulWidget {
 
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   static const navy = Color(0xFF1E3A8A);
+
+  int _selectedIndex = 0;
 
   final List<Report> reports = [
     Report(
@@ -32,12 +36,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       id: '2',
       title: 'Leather Bellroy Key Cover (Br...)',
       category: 'Accessories',
-      description: '',
+      description:
+      'Black slim sleeve leather wallet with red stitching. Contains NY state driver\'s license and subway MetroCard.',
       location: 'Civic Plaza Coffeehouse',
       date: DateTime.now().subtract(const Duration(days: 1)),
       type: ReportType.found,
       status: ReportStatus.dikonfirmasi,
       activityNote: 'Claim verified by barista',
+      reportIdentifier: '#LR-2024-8842',
+      verifiedBy: 'Sarah K.',
+      custodianName: 'Marcus Vance',
+      custodianRole: 'Lead Station Attendant, Metro Authority',
+      custodianPhone: '+1 (555) 019-2834',
+      custodianEmail: 'm.vance@example.com',
     ),
     Report(
       id: '3',
@@ -74,9 +85,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Future<void> _openFoundForm() async {
     final result = await Navigator.push<Report>(
       context,
-      MaterialPageRoute(builder: (_) => const ReportFormScreen(type: ReportType.found)),
+      MaterialPageRoute(builder: (_) => const ReportFoundScreen()),
     );
     if (result != null) setState(() => reports.insert(0, result));
+  }
+
+  Future<void> _openDetail(Report report) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ReportDetailScreen(report: report)),
+    );
+    // Refresh tampilan kalau status report berubah (mis. Mark as Returned).
+    setState(() {});
   }
 
   String _timeAgo(DateTime date) {
@@ -91,32 +111,66 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return '${diff.inDays} days ago';
   }
 
+  void _selectTab(int index) => setState(() => _selectedIndex = index);
+
+  Widget _buildHomeTab() {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 16),
+          _buildWelcomeBlock(),
+          const SizedBox(height: 16),
+          _buildAiCrossCheckCard(),
+          const SizedBox(height: 16),
+          _buildQuickActions(),
+          const SizedBox(height: 16),
+          _buildStatsCard(),
+          const SizedBox(height: 20),
+          _buildActivityHeader(),
+          const SizedBox(height: 12),
+          ...reports.map((r) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ActivityCard(
+              report: r,
+              timeAgoText: _timeAgo(r.date),
+              onTap: () => _openDetail(r),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertsTab() {
+    // TODO: belum diisi — nanti diisi daftar notifikasi/alerts di sini.
+    return SafeArea(
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.notifications_none, size: 40, color: Colors.grey.shade400),
+            const SizedBox(height: 10),
+            const Text('Alerts coming soon', style: TextStyle(color: Colors.black54, fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 16),
-            _buildWelcomeBlock(),
-            const SizedBox(height: 16),
-            _buildAiCrossCheckCard(),
-            const SizedBox(height: 16),
-            _buildQuickActions(),
-            const SizedBox(height: 16),
-            _buildStatsCard(),
-            const SizedBox(height: 20),
-            _buildActivityHeader(),
-            const SizedBox(height: 12),
-            ...reports.map((r) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _ActivityCard(report: r, timeAgoText: _timeAgo(r.date)),
-                )),
-          ],
-        ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildHomeTab(),
+          SearchScreen(reports: reports, timeAgo: _timeAgo, onOpenDetail: _openDetail),
+          MyReportsScreen(reports: reports, timeAgo: _timeAgo, onOpenDetail: _openDetail),
+          _buildAlertsTab(),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: navy,
@@ -159,11 +213,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(icon: Icons.home_filled, label: 'Home', active: true),
-              _NavItem(icon: Icons.search, label: 'Search'),
+              _NavItem(icon: Icons.home_filled, label: 'Home', active: _selectedIndex == 0, onTap: () => _selectTab(0)),
+              _NavItem(icon: Icons.search, label: 'Search', active: _selectedIndex == 1, onTap: () => _selectTab(1)),
               const SizedBox(width: 40),
-              _NavItem(icon: Icons.assignment_outlined, label: 'My Reports'),
-              _NavItem(icon: Icons.notifications_none, label: 'Alerts'),
+              _NavItem(icon: Icons.assignment_outlined, label: 'My Reports', active: _selectedIndex == 2, onTap: () => _selectTab(2)),
+              _NavItem(icon: Icons.notifications_none, label: 'Alerts', active: _selectedIndex == 3, onTap: () => _selectTab(3)),
             ],
           ),
         ),
@@ -229,7 +283,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget _buildAiCrossCheckCard() {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: navy.withOpacity(0.06), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: navy.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -374,7 +428,7 @@ class _QuickActionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(radius: 16, backgroundColor: iconColor.withOpacity(0.12), child: Icon(icon, color: iconColor, size: 16)),
+                CircleAvatar(radius: 16, backgroundColor: iconColor.withValues(alpha: 0.12), child: Icon(icon, color: iconColor, size: 16)),
                 const Spacer(),
                 const Icon(Icons.arrow_forward, size: 16, color: Colors.black38),
               ],
@@ -390,128 +444,30 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.report, required this.timeAgoText});
-  final Report report;
-  final String timeAgoText;
-
-  Color get _noteColor => switch (report.status) {
-        ReportStatus.baru => Colors.black54,
-        ReportStatus.dicocokkan => Colors.green,
-        ReportStatus.dikonfirmasi => Colors.amber.shade800,
-        ReportStatus.dikembalikan => Colors.green,
-      };
-
-  IconData get _noteIcon => switch (report.status) {
-        ReportStatus.baru => Icons.search,
-        ReportStatus.dicocokkan => Icons.check_circle_outline,
-        ReportStatus.dikonfirmasi => Icons.verified_outlined,
-        ReportStatus.dikembalikan => Icons.handshake_outlined,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final isLost = report.type == ReportType.lost;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isLost ? Colors.red.shade50 : Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  isLost ? 'LOST' : 'FOUND',
-                  style: TextStyle(
-                    color: isLost ? Colors.red.shade700 : Colors.green.shade700,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(report.category, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-              const Spacer(),
-              StatusBadge(status: report.status, showDot: true),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: report.photoPath != null
-                    ? Image.file(File(report.photoPath!), width: 48, height: 48, fit: BoxFit.cover)
-                    : Container(
-                        width: 48,
-                        height: 48,
-                        color: Colors.grey.shade100,
-                        child: Icon(isLost ? Icons.help_outline : Icons.inventory_2_outlined, color: Colors.black38),
-                      ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(report.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        const Icon(Icons.place_outlined, size: 12, color: Colors.black38),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(report.location, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (report.activityNote != null) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Icon(_noteIcon, size: 14, color: _noteColor),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(report.activityNote!, style: TextStyle(fontSize: 11, color: _noteColor, fontWeight: FontWeight.w600)),
-                ),
-                Text(timeAgoText, style: const TextStyle(fontSize: 10, color: Colors.black38)),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, this.active = false});
+  const _NavItem({required this.icon, required this.label, this.active = false, this.onTap});
   final IconData icon;
   final String label;
   final bool active;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = active ? const Color(0xFF1E3A8A) : Colors.black45;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 22),
-        const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: color, fontSize: 10)),
-      ],
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 2),
+            Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+          ],
+        ),
+      ),
     );
   }
 }
