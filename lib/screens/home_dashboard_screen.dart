@@ -1,15 +1,19 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/report.dart';
-import '../widgets/activity_card.dart';
+import '../widgets/status_badge.dart';
 import 'report_lost_screen.dart';
-import 'report_found_screen.dart';
-import 'report_detail_screen.dart';
+import 'report_form_screen.dart';
+import 'notifications_screen.dart';
+import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'my_reports_screen.dart';
+import '../models/user_profile.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
-  const HomeDashboardScreen({super.key, this.userName = 'Sarah'});
+  const HomeDashboardScreen({super.key, this.userName = 'Sarah', this.initialProfile});
   final String userName;
+  final UserProfile? initialProfile;
 
   @override
   State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
@@ -18,7 +22,9 @@ class HomeDashboardScreen extends StatefulWidget {
 class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   static const navy = Color(0xFF1E3A8A);
 
-  int _selectedIndex = 0;
+  // TODO(integrasi API): ganti data dummy ini dengan hasil GET /api/users/:id
+  late UserProfile _profile =
+      widget.initialProfile ?? UserProfile(name: widget.userName, email: 'sarah@example.com', phone: '');
 
   final List<Report> reports = [
     Report(
@@ -36,19 +42,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       id: '2',
       title: 'Leather Bellroy Key Cover (Br...)',
       category: 'Accessories',
-      description:
-      'Black slim sleeve leather wallet with red stitching. Contains NY state driver\'s license and subway MetroCard.',
+      description: '',
       location: 'Civic Plaza Coffeehouse',
       date: DateTime.now().subtract(const Duration(days: 1)),
       type: ReportType.found,
       status: ReportStatus.dikonfirmasi,
       activityNote: 'Claim verified by barista',
-      reportIdentifier: '#LR-2024-8842',
-      verifiedBy: 'Sarah K.',
-      custodianName: 'Marcus Vance',
-      custodianRole: 'Lead Station Attendant, Metro Authority',
-      custodianPhone: '+1 (555) 019-2834',
-      custodianEmail: 'm.vance@example.com',
     ),
     Report(
       id: '3',
@@ -85,18 +84,32 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Future<void> _openFoundForm() async {
     final result = await Navigator.push<Report>(
       context,
-      MaterialPageRoute(builder: (_) => const ReportFoundScreen()),
+      MaterialPageRoute(builder: (_) => const ReportFormScreen(type: ReportType.found)),
     );
     if (result != null) setState(() => reports.insert(0, result));
   }
 
-  Future<void> _openDetail(Report report) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => ReportDetailScreen(report: report)),
-    );
-    // Refresh tampilan kalau status report berubah (mis. Mark as Returned).
+  void _openAlerts() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+  }
+
+  Future<void> _openSearch() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => SearchScreen(reports: reports)));
+  }
+
+  Future<void> _openMyReports() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => MyReportsScreen(reports: reports)));
+    // Reports dilewatkan sebagai referensi yang sama, jadi kita cukup
+    // rebuild supaya perubahan status di My Reports langsung terlihat di Home.
     setState(() {});
+  }
+
+  Future<void> _openProfile() async {
+    final result = await Navigator.push<UserProfile>(
+      context,
+      MaterialPageRoute(builder: (_) => ProfileScreen(profile: _profile)),
+    );
+    if (result != null) setState(() => _profile = result);
   }
 
   String _timeAgo(DateTime date) {
@@ -111,66 +124,32 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return '${diff.inDays} days ago';
   }
 
-  void _selectTab(int index) => setState(() => _selectedIndex = index);
-
-  Widget _buildHomeTab() {
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          _buildWelcomeBlock(),
-          const SizedBox(height: 16),
-          _buildAiCrossCheckCard(),
-          const SizedBox(height: 16),
-          _buildQuickActions(),
-          const SizedBox(height: 16),
-          _buildStatsCard(),
-          const SizedBox(height: 20),
-          _buildActivityHeader(),
-          const SizedBox(height: 12),
-          ...reports.map((r) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: ActivityCard(
-              report: r,
-              timeAgoText: _timeAgo(r.date),
-              onTap: () => _openDetail(r),
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAlertsTab() {
-    // TODO: belum diisi — nanti diisi daftar notifikasi/alerts di sini.
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.notifications_none, size: 40, color: Colors.grey.shade400),
-            const SizedBox(height: 10),
-            const Text('Alerts coming soon', style: TextStyle(color: Colors.black54, fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          _buildHomeTab(),
-          SearchScreen(reports: reports, timeAgo: _timeAgo, onOpenDetail: _openDetail),
-          MyReportsScreen(reports: reports, timeAgo: _timeAgo, onOpenDetail: _openDetail),
-          _buildAlertsTab(),
-        ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 16),
+            _buildWelcomeBlock(),
+            const SizedBox(height: 16),
+            _buildAiCrossCheckCard(),
+            const SizedBox(height: 16),
+            _buildQuickActions(),
+            const SizedBox(height: 16),
+            _buildStatsCard(),
+            const SizedBox(height: 20),
+            _buildActivityHeader(),
+            const SizedBox(height: 12),
+            ...reports.map((r) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ActivityCard(report: r, timeAgoText: _timeAgo(r.date)),
+            )),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: navy,
@@ -213,11 +192,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(icon: Icons.home_filled, label: 'Home', active: _selectedIndex == 0, onTap: () => _selectTab(0)),
-              _NavItem(icon: Icons.search, label: 'Search', active: _selectedIndex == 1, onTap: () => _selectTab(1)),
+              _NavItem(icon: Icons.home_filled, label: 'Home', active: true),
+              _NavItem(icon: Icons.search, label: 'Search', onTap: _openSearch),
               const SizedBox(width: 40),
-              _NavItem(icon: Icons.assignment_outlined, label: 'My Reports', active: _selectedIndex == 2, onTap: () => _selectTab(2)),
-              _NavItem(icon: Icons.notifications_none, label: 'Alerts', active: _selectedIndex == 3, onTap: () => _selectTab(3)),
+              _NavItem(icon: Icons.assignment_outlined, label: 'My Reports', onTap: _openMyReports),
+              _NavItem(icon: Icons.notifications_none, label: 'Alerts', onTap: _openAlerts),
             ],
           ),
         ),
@@ -243,13 +222,26 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ],
         ),
         const Spacer(),
-        Badge(
-          label: const Text('3'),
-          backgroundColor: Colors.orange,
-          child: const Icon(Icons.notifications_none),
+        InkWell(
+          onTap: _openAlerts,
+          customBorder: const CircleBorder(),
+          child: Badge(
+            label: const Text('3'),
+            backgroundColor: Colors.orange,
+            child: const Icon(Icons.notifications_none),
+          ),
         ),
         const SizedBox(width: 12),
-        const CircleAvatar(radius: 16, backgroundColor: Colors.grey, child: Icon(Icons.person, size: 18, color: Colors.white)),
+        InkWell(
+          onTap: _openProfile,
+          customBorder: const CircleBorder(),
+          child: CircleAvatar(
+            radius: 16,
+            backgroundColor: Colors.grey,
+            backgroundImage: _profile.photoPath != null ? FileImage(File(_profile.photoPath!)) : null,
+            child: _profile.photoPath == null ? const Icon(Icons.person, size: 18, color: Colors.white) : null,
+          ),
+        ),
       ],
     );
   }
@@ -264,7 +256,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ],
         ),
         const SizedBox(height: 4),
-        Text('Welcome back, ${widget.userName}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F766E))),
+        Text('Welcome back, ${_profile.name}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF0F766E))),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -283,7 +275,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget _buildAiCrossCheckCard() {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: navy.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: navy.withOpacity(0.06), borderRadius: BorderRadius.circular(14)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -428,7 +420,7 @@ class _QuickActionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(radius: 16, backgroundColor: iconColor.withValues(alpha: 0.12), child: Icon(icon, color: iconColor, size: 16)),
+                CircleAvatar(radius: 16, backgroundColor: iconColor.withOpacity(0.12), child: Icon(icon, color: iconColor, size: 16)),
                 const Spacer(),
                 const Icon(Icons.arrow_forward, size: 16, color: Colors.black38),
               ],
@@ -439,6 +431,112 @@ class _QuickActionCard extends StatelessWidget {
             Text(subtitle, style: const TextStyle(fontSize: 11, color: Colors.black54)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  const _ActivityCard({required this.report, required this.timeAgoText});
+  final Report report;
+  final String timeAgoText;
+
+  Color get _noteColor => switch (report.status) {
+    ReportStatus.baru => Colors.black54,
+    ReportStatus.dicocokkan => Colors.green,
+    ReportStatus.dikonfirmasi => Colors.amber.shade800,
+    ReportStatus.dikembalikan => Colors.green,
+  };
+
+  IconData get _noteIcon => switch (report.status) {
+    ReportStatus.baru => Icons.search,
+    ReportStatus.dicocokkan => Icons.check_circle_outline,
+    ReportStatus.dikonfirmasi => Icons.verified_outlined,
+    ReportStatus.dikembalikan => Icons.handshake_outlined,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final isLost = report.type == ReportType.lost;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isLost ? Colors.red.shade50 : Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  isLost ? 'LOST' : 'FOUND',
+                  style: TextStyle(
+                    color: isLost ? Colors.red.shade700 : Colors.green.shade700,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(report.category, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+              const Spacer(),
+              StatusBadge(status: report.status, showDot: true),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: report.photoPath != null
+                    ? Image.file(File(report.photoPath!), width: 48, height: 48, fit: BoxFit.cover)
+                    : Container(
+                  width: 48,
+                  height: 48,
+                  color: Colors.grey.shade100,
+                  child: Icon(isLost ? Icons.help_outline : Icons.inventory_2_outlined, color: Colors.black38),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(report.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.place_outlined, size: 12, color: Colors.black38),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(report.location, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (report.activityNote != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(_noteIcon, size: 14, color: _noteColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(report.activityNote!, style: TextStyle(fontSize: 11, color: _noteColor, fontWeight: FontWeight.w600)),
+                ),
+                Text(timeAgoText, style: const TextStyle(fontSize: 10, color: Colors.black38)),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -458,13 +556,13 @@ class _NavItem extends StatelessWidget {
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+            Text(label, style: TextStyle(color: color, fontSize: 10)),
           ],
         ),
       ),

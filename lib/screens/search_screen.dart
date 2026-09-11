@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/report.dart';
-import '../widgets/activity_card.dart';
+import '../widgets/report_card.dart';
 
-/// Tab Search di bottom nav — cari laporan berdasarkan nama barang atau
-/// lokasi, dengan filter cepat Lost/Found.
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({
-    super.key,
-    required this.reports,
-    required this.timeAgo,
-    required this.onOpenDetail,
-  });
-
+  const SearchScreen({super.key, required this.reports});
   final List<Report> reports;
-  final String Function(DateTime) timeAgo;
-  final void Function(Report) onOpenDetail;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -23,109 +13,68 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   static const navy = Color(0xFF1E3A8A);
 
-  final _controller = TextEditingController();
-  ReportType? _typeFilter;
+  String _query = '';
+  ReportType? _typeFilter; // null = semua
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  List<Report> get _results {
-    final query = _controller.text.trim().toLowerCase();
+  List<Report> get _filtered {
     return widget.reports.where((r) {
-      final matchesQuery = query.isEmpty ||
-          r.title.toLowerCase().contains(query) ||
-          r.location.toLowerCase().contains(query) ||
-          r.category.toLowerCase().contains(query);
       final matchesType = _typeFilter == null || r.type == _typeFilter;
-      return matchesQuery && matchesType;
+      if (!matchesType) return false;
+      if (_query.trim().isEmpty) return true;
+      final q = _query.toLowerCase();
+      return r.title.toLowerCase().contains(q) ||
+          r.location.toLowerCase().contains(q) ||
+          r.category.toLowerCase().contains(q);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final results = _results;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF7F8FC),
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text('Cari Laporan', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Search Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            const SizedBox(height: 4),
-            const Text('Find lost or found items by name or location', style: TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 14),
             TextField(
-              controller: _controller,
-              autofocus: false,
-              onChanged: (_) => setState(() {}),
+              autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Search by item name or location...',
+                hintText: 'Cari nama barang, lokasi, atau kategori...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _controller.text.isEmpty
-                    ? null
-                    : IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(_controller.clear),
-                ),
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: navy, width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
+              onChanged: (val) => setState(() => _query = val),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                _FilterChip(label: 'All', selected: _typeFilter == null, onTap: () => setState(() => _typeFilter = null)),
+                _FilterChip(label: 'Semua', selected: _typeFilter == null, onTap: () => setState(() => _typeFilter = null)),
                 const SizedBox(width: 8),
-                _FilterChip(label: 'Lost', selected: _typeFilter == ReportType.lost, onTap: () => setState(() => _typeFilter = ReportType.lost)),
+                _FilterChip(label: 'Hilang', selected: _typeFilter == ReportType.lost, onTap: () => setState(() => _typeFilter = ReportType.lost)),
                 const SizedBox(width: 8),
-                _FilterChip(label: 'Found', selected: _typeFilter == ReportType.found, onTap: () => setState(() => _typeFilter = ReportType.found)),
+                _FilterChip(label: 'Temuan', selected: _typeFilter == ReportType.found, onTap: () => setState(() => _typeFilter = ReportType.found)),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             Expanded(
-              child: results.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.separated(
-                padding: const EdgeInsets.only(bottom: 90),
-                itemCount: results.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) {
-                  final r = results[i];
-                  return ActivityCard(
-                    report: r,
-                    timeAgoText: widget.timeAgo(r.date),
-                    onTap: () => widget.onOpenDetail(r),
-                  );
-                },
+              child: _filtered.isEmpty
+                  ? const Center(child: Text('Tidak ada laporan yang cocok.'))
+                  : ListView.builder(
+                itemCount: _filtered.length,
+                itemBuilder: (context, index) => ReportCard(report: _filtered[index]),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    final hasQuery = _controller.text.isNotEmpty;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.search_off, size: 40, color: Colors.grey.shade400),
-          const SizedBox(height: 10),
-          Text(
-            hasQuery ? 'No reports match "${_controller.text}"' : 'Start typing to search reports',
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-        ],
       ),
     );
   }
@@ -153,7 +102,7 @@ class _FilterChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(color: selected ? Colors.white : Colors.black87, fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: selected ? Colors.white : Colors.black87),
         ),
       ),
     );

@@ -1,20 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/report.dart';
-import '../widgets/activity_card.dart';
+import '../widgets/report_card.dart';
+import '../widgets/status_badge.dart';
 
-/// Tab My Reports di bottom nav — daftar semua laporan milik user,
-/// dengan ringkasan statistik dan filter status.
 class MyReportsScreen extends StatefulWidget {
-  const MyReportsScreen({
-    super.key,
-    required this.reports,
-    required this.timeAgo,
-    required this.onOpenDetail,
-  });
-
+  const MyReportsScreen({super.key, required this.reports});
   final List<Report> reports;
-  final String Function(DateTime) timeAgo;
-  final void Function(Report) onOpenDetail;
 
   @override
   State<MyReportsScreen> createState() => _MyReportsScreenState();
@@ -23,112 +14,74 @@ class MyReportsScreen extends StatefulWidget {
 class _MyReportsScreenState extends State<MyReportsScreen> {
   static const navy = Color(0xFF1E3A8A);
 
-  ReportStatus? _statusFilter;
+  ReportStatus? _statusFilter; // null = semua
 
   List<Report> get _filtered {
     if (_statusFilter == null) return widget.reports;
     return widget.reports.where((r) => r.status == _statusFilter).toList();
   }
 
-  Color _statusColor(ReportStatus s) => switch (s) {
-    ReportStatus.baru => Colors.grey.shade600,
-    ReportStatus.dicocokkan => Colors.blue,
-    ReportStatus.dikonfirmasi => Colors.amber.shade700,
-    ReportStatus.dikembalikan => Colors.green,
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _filtered;
-    final lostCount = widget.reports.where((r) => r.type == ReportType.lost).length;
-    final foundCount = widget.reports.where((r) => r.type == ReportType.found).length;
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('My Reports', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-            const SizedBox(height: 4),
-            const Text('Everything you have reported, in one place', style: TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(child: _StatChip(label: 'Total', value: '${widget.reports.length}', color: navy)),
-                const SizedBox(width: 8),
-                Expanded(child: _StatChip(label: 'Lost', value: '$lostCount', color: Colors.red.shade400)),
-                const SizedBox(width: 8),
-                Expanded(child: _StatChip(label: 'Found', value: '$foundCount', color: Colors.green.shade600)),
-              ],
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 36,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _StatusChip(label: 'All', selected: _statusFilter == null, color: navy, onTap: () => setState(() => _statusFilter = null)),
-                  ...ReportStatus.values.map(
-                        (s) => Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: _StatusChip(
-                        label: s.label,
-                        selected: _statusFilter == s,
-                        color: _statusColor(s),
-                        onTap: () => setState(() => _statusFilter = s),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                child: Text(
-                  'No reports in this status yet.',
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
-                ),
-              )
-                  : ListView.separated(
-                padding: const EdgeInsets.only(bottom: 90),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) {
-                  final r = filtered[i];
-                  return ActivityCard(
-                    report: r,
-                    timeAgoText: widget.timeAgo(r.date),
-                    onTap: () => widget.onOpenDetail(r),
-                  );
-                },
-              ),
-            ),
-          ],
+  Future<void> _showStatusPicker(Report report) async {
+    final picked = await showModalBottomSheet<ReportStatus>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: ReportStatus.values.map((s) {
+            return ListTile(
+              leading: StatusBadge(status: s),
+              title: Text(s.label),
+              trailing: report.status == s ? const Icon(Icons.check, color: navy) : null,
+              onTap: () => Navigator.pop(context, s),
+            );
+          }).toList(),
         ),
       ),
     );
+    if (picked != null) {
+      setState(() => report.status = picked);
+    }
   }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.label, required this.value, required this.color});
-  final String label;
-  final String value;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
-      child: Column(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FC),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF7F8FC),
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text('My Reports', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      body: Column(
         children: [
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color)),
-          const SizedBox(height: 2),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _StatusChip(label: 'Semua', selected: _statusFilter == null, onTap: () => setState(() => _statusFilter = null)),
+                const SizedBox(width: 8),
+                for (final s in ReportStatus.values) ...[
+                  _StatusChip(label: s.label, selected: _statusFilter == s, onTap: () => setState(() => _statusFilter = s)),
+                  const SizedBox(width: 8),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _filtered.isEmpty
+                ? const Center(child: Text('Belum ada laporan di kategori ini.'))
+                : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              itemCount: _filtered.length,
+              itemBuilder: (context, index) {
+                final report = _filtered[index];
+                return ReportCard(report: report, onTap: () => _showStatusPicker(report));
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -136,11 +89,12 @@ class _StatChip extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.selected, required this.color, required this.onTap});
+  const _StatusChip({required this.label, required this.selected, required this.onTap});
   final String label;
   final bool selected;
-  final Color color;
   final VoidCallback onTap;
+
+  static const navy = Color(0xFF1E3A8A);
 
   @override
   Widget build(BuildContext context) {
@@ -150,13 +104,13 @@ class _StatusChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? color : Colors.white,
+          color: selected ? navy : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? color : Colors.grey.shade300),
+          border: Border.all(color: selected ? navy : Colors.grey.shade300),
         ),
         child: Text(
           label,
-          style: TextStyle(color: selected ? Colors.white : Colors.black87, fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: selected ? Colors.white : Colors.black87),
         ),
       ),
     );
