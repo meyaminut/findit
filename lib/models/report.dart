@@ -56,4 +56,64 @@ class Report {
   String? custodianRole;
   String? custodianPhone;
   String? custodianEmail;
+
+  factory Report.fromJson(Map<String, dynamic> json) {
+    final typeStr = json['type']?.toString().toLowerCase();
+    final type = typeStr == 'found' ? ReportType.found : ReportType.lost;
+
+    final statusStr = json['status']?.toString().toLowerCase();
+    final status = switch (statusStr) {
+      'dicocokkan' || 'matched' => ReportStatus.dicocokkan,
+      'dikonfirmasi' || 'confirmed' || 'cancelled' => ReportStatus.dikonfirmasi,
+      'dikembalikan' || 'resolved' => ReportStatus.dikembalikan,
+      _ => ReportStatus.baru,
+    };
+
+    DateTime parsedDate;
+    try {
+      parsedDate = json['date'] != null ? DateTime.parse('${json['date']}') : DateTime.now();
+    } catch (_) {
+      parsedDate = DateTime.now();
+    }
+
+    return Report(
+      id: '${json['id'] ?? ''}',
+      title: json['title'] ?? '',
+      category: json['category'] ?? 'Others',
+      description: json['description'] ?? '',
+      location: json['location'] ?? '',
+      date: parsedDate,
+      type: type,
+      status: status,
+      photoPath: json['photoPath'] ?? json['photo_url'],
+      activityNote: json['activityNote'] ?? json['activity_note'],
+      handoverMethod: json['handoverMethod'] ?? json['handover_method'],
+      reportIdentifier: json['reportIdentifier'] ?? json['report_identifier'],
+      verifiedBy: json['verifiedBy'] ?? json['verified_by'],
+      custodianName: json['custodianName'] ?? json['custodian_name'],
+      custodianRole: json['custodianRole'] ?? json['custodian_role'],
+      custodianPhone: json['custodianPhone'] ?? json['custodian_phone'],
+      custodianEmail: json['custodianEmail'] ?? json['custodian_email'],
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'category': category,
+    'description': description,
+    'location': location,
+    'date': date.toIso8601String(),
+    'type': type.name,
+    'status': status.name,
+    'photoPath': photoPath,
+    'activityNote': activityNote,
+    'handoverMethod': handoverMethod,
+    'reportIdentifier': reportIdentifier,
+    'verifiedBy': verifiedBy,
+    'custodianName': custodianName,
+    'custodianRole': custodianRole,
+    'custodianPhone': custodianPhone,
+    'custodianEmail': custodianEmail,
+  };
 }

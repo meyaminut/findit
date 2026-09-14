@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
+import 'api_config.dart';
 
 /// Exception dengan pesan yang sudah dalam Bahasa Indonesia dari backend
 /// (field `message` di ResponseFormat), siap ditampilkan langsung ke user.
@@ -13,11 +14,8 @@ class ApiException implements Exception {
 }
 
 class AuthService {
-  /// Ganti sesuai environment kamu:
-  /// - Emulator Android  -> http://10.0.2.2:8080/api
-  /// - Web/desktop/simulator iOS -> http://localhost:8080/api
-  /// - HP fisik -> http://[IP komputer kamu di wifi yang sama]:8080/api
-  static const String baseUrl = 'http://10.0.2.2:8080/api';
+  /// Base URL ke database lokal MySQL (u278523899_findit) di Laragon.
+  static String get baseUrl => ApiConfig.baseUrl;
 
   static Future<UserProfile> register({
     required String name,
