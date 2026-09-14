@@ -5,6 +5,7 @@ import '../../../controllers/report_controller.dart';
 import '../../../models/report.dart';
 import '../../../models/user_profile.dart';
 import '../../widgets/activity_card.dart';
+import '../../widgets/desktop_navbar.dart';
 import '../../widgets/responsive_wrapper.dart';
 import '../notifications/notifications_screen.dart';
 import '../admin/admin_match_review_screen.dart';
@@ -187,74 +188,146 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FC),
       body: SafeArea(
-        child: ResponsiveContainer(
-          maxWidth: 1060,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-          child: ListView(
-            children: [
-              DashboardHeader(
+        child: Column(
+          children: [
+            if (desktop)
+              DesktopNavbar(
+                activeTab: DesktopNavTab.dashboard,
                 profile: _profile,
                 unreadAlerts: _notificationController.unreadCount,
+                onDashboardTap: () {},
+                onSearchTap: _openSearch,
+                onMyReportsTap: _openMyReports,
                 onAlertsTap: _openAlerts,
-                onProfileTap: _openProfile,
+                onLostTap: _openLostForm,
+                onFoundTap: _openFoundForm,
                 onAdminTap: _profile.isAdmin ? _openAdminPortal : null,
+                onProfileTap: _openProfile,
               ),
-              const SizedBox(height: 20),
-              if (desktop)
-                // Layout 2 Kolom untuk Desktop / Layar Lebar
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            Expanded(
+              child: ResponsiveContainer(
+                maxWidth: desktop ? 1240 : 1060,
+                padding: EdgeInsets.fromLTRB(16, desktop ? 24 : 12, 16, desktop ? 40 : 90),
+                child: ListView(
                   children: [
-                    // Kolom Kiri: Konten Utama (Civic Radar, Aksi Cepat, Feed Laporan)
-                    Expanded(
-                      flex: 3,
-                      child: Column(
+                    if (!desktop) ...[
+                      DashboardHeader(
+                        profile: _profile,
+                        unreadAlerts: _notificationController.unreadCount,
+                        onAlertsTap: _openAlerts,
+                        onProfileTap: _openProfile,
+                        onAdminTap: _profile.isAdmin ? _openAdminPortal : null,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                    if (desktop)
+                      // Layout 2 Kolom untuk Desktop / Layar Lebar
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CivicRadarBanner(
-                            userName: _profile.name,
-                            totalReports: _reportController.totalReports,
-                          ),
-                          const SizedBox(height: 16),
-                          QuickActionCards(
-                            onLostTap: _openLostForm,
-                            onFoundTap: _openFoundForm,
-                          ),
-                          const SizedBox(height: 24),
-                          ActivityHeader(
-                            count: _reportController.totalReports,
-                            onFilterTap: _openSearch,
-                            onViewAllTap: _openMyReports,
-                          ),
-                          const SizedBox(height: 12),
-                          ...reports.map((r) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: ActivityCard(
-                                  report: r,
-                                  timeAgoText: _timeAgo(r.date),
-                                  onTap: () => _openReportDetail(r),
+                          // Kolom Kiri: Konten Utama (Civic Radar, Aksi Cepat, Feed Laporan Grid)
+                          Expanded(
+                            flex: 3,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CivicRadarBanner(
+                                  userName: _profile.name,
+                                  totalReports: _reportController.totalReports,
                                 ),
-                              )),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    // Kolom Kanan: Sidebar (AI Smart Check & Statistik Akurasi)
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        children: [
-                          const AiCrossCheckBanner(),
-                          const SizedBox(height: 16),
-                          DashboardStatsCard(
-                            matchedCount: _reportController.matchedReports,
-                            returnedCount: _reportController.returnedReports,
+                                const SizedBox(height: 16),
+                                QuickActionCards(
+                                  onLostTap: _openLostForm,
+                                  onFoundTap: _openFoundForm,
+                                ),
+                                const SizedBox(height: 24),
+                                ActivityHeader(
+                                  count: _reportController.totalReports,
+                                  onFilterTap: _openSearch,
+                                  onViewAllTap: _openMyReports,
+                                ),
+                                const SizedBox(height: 12),
+                                LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final crossCount = constraints.maxWidth > 580 ? 2 : 1;
+                                    return GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: crossCount,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
+                                        mainAxisExtent: 155,
+                                      ),
+                                      itemCount: reports.length,
+                                      itemBuilder: (context, index) {
+                                        final r = reports[index];
+                                        return ActivityCard(
+                                          report: r,
+                                          timeAgoText: _timeAgo(r.date),
+                                          onTap: () => _openReportDetail(r),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 24),
+                          // Kolom Kanan: Sidebar (AI Smart Check, Statistik & Panduan)
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                const AiCrossCheckBanner(),
+                                const SizedBox(height: 16),
+                                DashboardStatsCard(
+                                  matchedCount: _reportController.matchedReports,
+                                  returnedCount: _reportController.returnedReports,
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: const [
+                                          Icon(Icons.verified_user_outlined, size: 18, color: navy),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Panduan Keamanan Kampus',
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: navy),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      const Text(
+                                        'Barang berharga (laptop, dompet, kunci) yang ditemukan wajib diserahkan ke Desk Station terdekat dalam 24 jam untuk verifikasi sistem AI.',
+                                        style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: const [
+                                          Icon(Icons.location_on_outlined, size: 14, color: Colors.black45),
+                                          SizedBox(width: 4),
+                                          Text('Station Utama: Gedung Pusat Lt. 1', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
-                )
+                      )
               else
                 // Layout 1 Kolom Vertikal untuk Mobile
                 Column(
@@ -297,6 +370,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ),
         ),
       ),
+    ],
+  ),
+),
       floatingActionButton: desktop
           ? null
           : FloatingActionButton(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-bool isDesktop(BuildContext context) => MediaQuery.sizeOf(context).width >= 800;
+bool isDesktop(BuildContext context) => MediaQuery.sizeOf(context).width >= 960;
 bool isTablet(BuildContext context) {
   final w = MediaQuery.sizeOf(context).width;
-  return w >= 600 && w < 800;
+  return w >= 600 && w < 960;
 }
 bool isMobile(BuildContext context) => MediaQuery.sizeOf(context).width < 600;
 

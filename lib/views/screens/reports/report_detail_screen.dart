@@ -100,6 +100,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final desktop = isDesktop(context);
+
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
@@ -112,68 +114,200 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
         titleSpacing: 0,
         title: Row(
-          children: const [
-            Icon(Icons.search, size: 18, color: Colors.black54),
-            SizedBox(width: 6),
-            Text('Report Detail', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          children: [
+            const Icon(Icons.inventory_2_outlined, size: 18, color: Colors.black54),
+            const SizedBox(width: 8),
+            Text(
+              desktop ? 'Detail Laporan Barang #${report.id}' : 'Report Detail',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            if (desktop && report.reportIdentifier != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  report.reportIdentifier!,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                ),
+              ),
+            ],
           ],
         ),
       ),
       body: ResponsiveContainer(
-        maxWidth: 820,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-          children: [
-          _buildCaseFileRow(),
-          const SizedBox(height: 12),
-          DetailHeroHeader(
-            report: report,
-            stageIndex: _stageIndex,
-            badgeColor: _stageColor(_stageIndex),
-          ),
-          const SizedBox(height: 20),
-          VerificationTimeline(
-            stageIndex: _stageIndex,
-            stageOrder: _stageOrder,
-            stageLabels: _stageLabels,
-            stageColor: _stageColor,
-          ),
-          if (_isConfirmed) ...[
-            const SizedBox(height: 16),
-            _buildConfirmedCard(),
-          ],
-          if (_isReturned) ...[
-            const SizedBox(height: 16),
-            _buildReturnedCard(),
-          ],
-          if (_hasCustodian) ...[
-            const SizedBox(height: 24),
-            CustodianInfoCard(
-              report: report,
-              onCall: _callFinder,
-              onMessage: _messageFinder,
-            ),
-          ],
-          const SizedBox(height: 24),
-          CatalogDetailsCard(
-            report: report,
-            hasCustodian: _hasCustodian,
-            onCopyIdentifier: _copyIdentifier,
-            formatDate: _formatDate,
-          ),
-          if (_isConfirmed && _hasCustodian) ...[
-            const SizedBox(height: 20),
-            _buildConfirmQuestion(),
-            const SizedBox(height: 12),
-            _buildMarkReturnedButton(),
-            const SizedBox(height: 10),
-            _buildReportIssueLink(),
-          ],
-        ],
+        maxWidth: desktop ? 1200 : 820,
+        child: desktop
+            ? ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                children: [
+                  _buildCaseFileRow(),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Kolom Kiri: Header Hero, Timeline, dan Detail Katalog
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DetailHeroHeader(
+                              report: report,
+                              stageIndex: _stageIndex,
+                              badgeColor: _stageColor(_stageIndex),
+                            ),
+                            const SizedBox(height: 20),
+                            VerificationTimeline(
+                              stageIndex: _stageIndex,
+                              stageOrder: _stageOrder,
+                              stageLabels: _stageLabels,
+                              stageColor: _stageColor,
+                            ),
+                            const SizedBox(height: 24),
+                            CatalogDetailsCard(
+                              report: report,
+                              hasCustodian: _hasCustodian,
+                              onCopyIdentifier: _copyIdentifier,
+                              formatDate: _formatDate,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // Kolom Kanan: Status Konfirmasi, Custodian/Penemu, dan Aksi
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_isConfirmed) ...[
+                              _buildConfirmedCard(),
+                              const SizedBox(height: 16),
+                            ],
+                            if (_isReturned) ...[
+                              _buildReturnedCard(),
+                              const SizedBox(height: 16),
+                            ],
+                            if (_hasCustodian) ...[
+                              CustodianInfoCard(
+                                report: report,
+                                onCall: _callFinder,
+                                onMessage: _messageFinder,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            if (_isConfirmed && _hasCustodian) ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Column(
+                                  children: [
+                                    _buildConfirmQuestion(),
+                                    const SizedBox(height: 12),
+                                    _buildMarkReturnedButton(),
+                                    const SizedBox(height: 10),
+                                    _buildReportIssueLink(),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.radar, size: 18, color: Color(0xFF1E3A8A)),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Status Radar Kecocokan AI',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E3A8A)),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Sistem secara berkala memindai laporan baru dan mencocokkan ciri fisik, lokasi penemuan, dan waktu. Notifikasi akan dikirim saat kecocokan terdeteksi.',
+                                      style: TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                children: [
+                  _buildCaseFileRow(),
+                  const SizedBox(height: 12),
+                  DetailHeroHeader(
+                    report: report,
+                    stageIndex: _stageIndex,
+                    badgeColor: _stageColor(_stageIndex),
+                  ),
+                  const SizedBox(height: 20),
+                  VerificationTimeline(
+                    stageIndex: _stageIndex,
+                    stageOrder: _stageOrder,
+                    stageLabels: _stageLabels,
+                    stageColor: _stageColor,
+                  ),
+                  if (_isConfirmed) ...[
+                    const SizedBox(height: 16),
+                    _buildConfirmedCard(),
+                  ],
+                  if (_isReturned) ...[
+                    const SizedBox(height: 16),
+                    _buildReturnedCard(),
+                  ],
+                  if (_hasCustodian) ...[
+                    const SizedBox(height: 24),
+                    CustodianInfoCard(
+                      report: report,
+                      onCall: _callFinder,
+                      onMessage: _messageFinder,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  CatalogDetailsCard(
+                    report: report,
+                    hasCustodian: _hasCustodian,
+                    onCopyIdentifier: _copyIdentifier,
+                    formatDate: _formatDate,
+                  ),
+                  if (_isConfirmed && _hasCustodian) ...[
+                    const SizedBox(height: 20),
+                    _buildConfirmQuestion(),
+                    const SizedBox(height: 12),
+                    _buildMarkReturnedButton(),
+                    const SizedBox(height: 10),
+                    _buildReportIssueLink(),
+                  ],
+                ],
+              ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCaseFileRow() {
     final label = _isReturned ? 'CASE CLOSED' : 'ACTIVE CASE FILE';
