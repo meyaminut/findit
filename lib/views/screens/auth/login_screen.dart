@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../controllers/auth_controller.dart';
-import '../../../models/user_profile.dart';
 import '../../widgets/responsive_wrapper.dart';
 import '../admin/admin_match_review_screen.dart';
 import '../dashboard/home_dashboard_screen.dart';
@@ -182,46 +181,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: const Text('Daftar'),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: const [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Text('atau', style: TextStyle(fontSize: 12, color: Colors.black38)),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: navy,
-                          side: const BorderSide(color: Color(0xFFCBD5E1)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AdminMatchReviewScreen(
-                                userProfile: UserProfile(
-                                  name: 'Sarah Jenkins',
-                                  email: 'sarah.j@campus.edu',
-                                  phone: '+1 (555) 019-2834',
-                                  role: 'admin',
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.admin_panel_settings_outlined, size: 18),
-                        label: const Text(
-                          'Buka Portal Admin Match Review',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
                       ),
                     ],
                   ),
