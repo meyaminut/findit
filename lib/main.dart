@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_dashboard_screen.dart';
+import 'features/worker/screens/worker_dashboard_page.dart';
 
 void main() => runApp(const MyApp());
 
@@ -8,9 +8,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomeDashboardScreen(),
+      title: 'FindIt!',
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E3A8A)),
+        scaffoldBackgroundColor: const Color(0xFFF7F8FC),
+      ),
+      home: const WorkerDashboardPage(),
     );
   }
 }

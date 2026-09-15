@@ -10,9 +10,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:findit/main.dart';
 
 void main() {
-  testWidgets('app loads with dashboard', (WidgetTester tester) async {
+  testWidgets('app loads with worker dashboard', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
 
-    expect(find.text('FindIt!'), findsOneWidget);
+    expect(find.text('Dashboard Worker Hotel'), findsOneWidget);
+    expect(find.text('Halo, Budi!'), findsOneWidget);
   });
 }
